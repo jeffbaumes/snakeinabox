@@ -1,531 +1,493 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snake in a Box - Hypercube Game</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f0f0;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .container {
-            width: 100vw;
-            height: 100vh;
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .controls {
-            padding: 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            flex-shrink: 0;
-        }
-        
-        .control-group {
-            display: inline-block;
-            margin-right: 20px;
-            vertical-align: top;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        select, button {
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-        
-        button:hover {
-            background: #0056b3;
-        }
-        
-        button:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-        
-        .game-area {
-            position: relative;
-            background: #fff;
-            flex: 1;
-            overflow: hidden;
-        }
-        
-        .dot {
-            position: absolute;
-            background: #333;
-            cursor: pointer;
-            border: 1px solid #666;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .dot:hover {
-            opacity: 0.8;
-        }
-        
-        .dot.origin {
-            background: #28a745;
-            border-color: #1e7e34;
-        }
-        
-        .dot.current {
-            background: #dc3545;
-            border-color: #c82333;
-            animation: pulse 1s infinite;
-        }
-        
-        .dot.visited {
-            background: #ffc107;
-            border-color: #e0a800;
-        }
-        
-        .dot.valid-move {
-            background: #17a2b8;
-            border-color: #138496;
-        }
-        
-        .dot.blocked {
-            background: #6c757d;
-            border-color: #545b62;
-            cursor: not-allowed;
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
-        
-        .path-line {
-            position: absolute;
-            background: #dc3545;
-            height: 2px;
-            transform-origin: left center;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        .info {
-            padding: 15px;
-            background: #e9ecef;
-            border-top: 1px solid #ddd;
-            flex-shrink: 0;
-        }
-        
-        .coordinate {
-            font-family: monospace;
-            background: #fff;
-            padding: 2px 4px;
-            border-radius: 3px;
-            margin-right: 5px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f0f0f0;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .controls {
+        padding: 15px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #ddd;
+        flex-shrink: 0;
+      }
+
+      .control-group {
+        display: inline-block;
+        margin-right: 20px;
+        vertical-align: top;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      select,
+      button {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-right: 5px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .game-area {
+        position: relative;
+        background: #fff;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      #gameCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .info {
+        padding: 15px;
+        background: #e9ecef;
+        border-top: 1px solid #ddd;
+        flex-shrink: 0;
+      }
+
+      .coordinate {
+        font-family: monospace;
+        background: #fff;
+        padding: 2px 4px;
+        border-radius: 3px;
+        margin-right: 5px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>Snake in a Box - Hypercube Game</h1>
-        <p>Navigate through a hypercube by connecting adjacent vertices. Create the longest possible path!</p>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label for="dimension">Dimension (1-10):</label>
-                <select id="dimension">
-                    <option value="1">1D</option>
-                    <option value="2">2D</option>
-                    <option value="3" selected>3D</option>
-                    <option value="4">4D</option>
-                    <option value="5">5D</option>
-                    <option value="6">6D</option>
-                    <option value="7">7D</option>
-                    <option value="8">8D</option>
-                    <option value="9">9D</option>
-                    <option value="10">10D</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <button id="restart">Restart</button>
-                <button id="undo" disabled>Undo Last Move</button>
-            </div>
+      <h1>Snake in a Box - Hypercube Game</h1>
+      <p>
+        Navigate through a hypercube by connecting adjacent vertices. Create the
+        longest possible path!
+      </p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="dimension">Dimension (1-10):</label>
+          <select id="dimension">
+            <option value="1">1D</option>
+            <option value="2">2D</option>
+            <option value="3" selected>3D</option>
+            <option value="4">4D</option>
+            <option value="5">5D</option>
+            <option value="6">6D</option>
+            <option value="7">7D</option>
+            <option value="8">8D</option>
+            <option value="9">9D</option>
+            <option value="10">10D</option>
+          </select>
         </div>
-        
-        <div class="game-area" id="gameArea"></div>
-        
-        <div class="info">
-            <div><strong>Current Position:</strong> <span class="coordinate" id="currentPos">(0,0,0)</span></div>
-            <div><strong>Path Length:</strong> <span id="pathLength">0</span></div>
-            <div><strong>Total Vertices:</strong> <span id="totalVertices">8</span></div>
-            <div><strong>Instructions:</strong> Click on highlighted dots to move. Green=origin, Red=current position, Blue=valid moves, Gray=blocked moves</div>
+
+        <div class="control-group">
+          <button id="restart">Restart</button>
+          <button id="undo" disabled>Undo Last Move</button>
         </div>
+      </div>
+
+      <div class="game-area" id="gameArea">
+        <canvas id="gameCanvas"></canvas>
+      </div>
+
+      <div class="info">
+        <div>
+          <strong>Current Position:</strong>
+          <span class="coordinate" id="currentPos">(0,0,0)</span>
+        </div>
+        <div><strong>Path Length:</strong> <span id="pathLength">0</span></div>
+        <div>
+          <strong>Total Vertices:</strong> <span id="totalVertices">8</span>
+        </div>
+        <div>
+          <strong>Instructions:</strong> Click on boxes to move. Green=origin,
+          Red=current position, Blue=valid moves, Gray=blocked moves
+        </div>
+      </div>
     </div>
 
     <script>
-        class SnakeInBox {
-            constructor() {
-                this.dimension = 3;
-                this.currentPosition = new Array(this.dimension).fill(0);
-                this.path = [this.currentPosition.slice()];
-                this.gameArea = document.getElementById('gameArea');
-                this.dots = new Map();
-                this.pathLines = [];
-                
-                this.init();
-            }
-            
-            init() {
-                document.getElementById('dimension').addEventListener('change', (e) => {
-                    this.dimension = parseInt(e.target.value);
-                    this.restart();
-                });
-                
-                document.getElementById('restart').addEventListener('click', () => {
-                    this.restart();
-                });
-                
-                document.getElementById('undo').addEventListener('click', () => {
-                    this.undo();
-                });
-                
-                this.restart();
-            }
-            
-            restart() {
-                this.currentPosition = new Array(this.dimension).fill(0);
-                this.path = [this.currentPosition.slice()];
-                this.clearGame();
-                this.generateVertices();
-                this.updateUI();
-                this.highlightValidMoves();
-            }
-            
-            clearGame() {
-                this.gameArea.innerHTML = '';
-                this.dots.clear();
-                this.pathLines = [];
-            }
-            
-            generateVertices() {
-                const totalVertices = Math.pow(2, this.dimension);
-                const areaWidth = this.gameArea.clientWidth || 1000;
-                const areaHeight = this.gameArea.clientHeight || 600;
-                
-                // Calculate grid spacing for square sizing
-                const W = Math.min(areaWidth, areaHeight) * 0.85;
-                const ceilHalfD = Math.ceil(this.dimension / 2);
-                const spacing = W / Math.pow(2, ceilHalfD);
-                
-                for (let i = 0; i < totalVertices; i++) {
-                    const coords = this.numberToBinaryCoords(i, this.dimension);
-                    const position = this.coordsToPosition(coords, areaWidth, areaHeight);
-                    
-                    const dot = document.createElement('div');
-                    dot.className = 'dot';
-                    
-                    // Make squares centered at position extending to next grid cell
-                    const squareSize = spacing * 0.9; // 90% of spacing to leave small gaps
-                    dot.style.left = (position.x - squareSize/2) + 'px';
-                    dot.style.top = (position.y - squareSize/2) + 'px';
-                    dot.style.width = squareSize + 'px';
-                    dot.style.height = squareSize + 'px';
-                    
-                    dot.dataset.coords = JSON.stringify(coords);
-                    
-                    if (this.arraysEqual(coords, this.currentPosition)) {
-                        dot.classList.add('current');
-                    }
-                    
-                    if (this.arraysEqual(coords, new Array(this.dimension).fill(0))) {
-                        dot.classList.add('origin');
-                    }
-                    
-                    dot.addEventListener('click', () => {
-                        this.handleDotClick(coords);
-                    });
-                    
-                    this.gameArea.appendChild(dot);
-                    this.dots.set(this.coordsToString(coords), dot);
-                }
-            }
-            
-            coordsToPosition(coords, areaWidth, areaHeight) {
-                // Use minimum dimension for square grid
-                const W = Math.min(areaWidth, areaHeight) * 0.85; // 85% for padding
-                const D = this.dimension;
-                
-                // Calculate grid spacing using formula: W/(2^ceil(D/2))
-                const ceilHalfD = Math.ceil(D / 2);
-                const spacing = W / Math.pow(2, ceilHalfD);
-                
-                // Start from center and place dots in a regular grid
-                const centerX = areaWidth / 2;
-                const centerY = areaHeight / 2;
-                
-                // Calculate grid dimensions
-                const maxCoordX = Math.ceil(D / 2) - 1;
-                const maxCoordY = Math.floor(D / 2) - 1;
-                
-                let gridX = 0;
-                let gridY = 0;
-                
-                // Map hypercube coordinates to grid positions
-                for (let i = 0; i < coords.length; i++) {
-                    const power = Math.pow(2, Math.floor(i / 2));
-                    
-                    if (i % 2 === 0) { // x dimensions
-                        gridX += coords[i] * power;
-                    } else { // y dimensions  
-                        gridY += coords[i] * power;
-                    }
-                }
-                
-                // Convert grid position to screen coordinates
-                const x = centerX + (gridX - Math.pow(2, maxCoordX)) * spacing;
-                const y = centerY + (gridY - Math.pow(2, maxCoordY)) * spacing;
-                
-                return { x, y };
-            }
-            
-            numberToBinaryCoords(num, dimension) {
-                const coords = [];
-                for (let i = 0; i < dimension; i++) {
-                    coords.push((num >> i) & 1);
-                }
-                return coords;
-            }
-            
-            coordsToString(coords) {
-                return coords.join(',');
-            }
-            
-            arraysEqual(a, b) {
-                return a.length === b.length && a.every((val, i) => val === b[i]);
-            }
-            
-            isAdjacent(coords1, coords2) {
-                let differences = 0;
-                for (let i = 0; i < coords1.length; i++) {
-                    if (coords1[i] !== coords2[i]) {
-                        differences++;
-                        if (differences > 1) return false;
-                    }
-                }
-                return differences === 1;
-            }
-            
-            isVisited(coords) {
-                return this.path.some(pathCoords => this.arraysEqual(pathCoords, coords));
-            }
-            
-            isBlocked(coords) {
-                if (this.isVisited(coords)) return true;
-                
-                // Check for chord: the new position would be adjacent to any vertex in the path 
-                // other than the current position (last in path)
-                for (let i = 0; i < this.path.length - 1; i++) {
-                    if (this.isAdjacent(coords, this.path[i])) {
-                        return true; // This would create a chord
-                    }
-                }
-                
-                return false;
-            }
-            
-            wouldCreateDeadEnd(coords, tempPath) {
-                const totalVertices = Math.pow(2, this.dimension);
-                
-                for (let i = 0; i < totalVertices; i++) {
-                    const testCoords = this.numberToBinaryCoords(i, this.dimension);
-                    if (tempPath.some(pathCoords => this.arraysEqual(pathCoords, testCoords))) {
-                        continue;
-                    }
-                    
-                    let adjacentToPath = 0;
-                    for (const pathCoords of tempPath) {
-                        if (this.isAdjacent(testCoords, pathCoords)) {
-                            adjacentToPath++;
-                        }
-                    }
-                    
-                    if (adjacentToPath > 2) {
-                        return true;
-                    }
-                }
-                
-                return false;
-            }
-            
-            handleDotClick(coords) {
-                if (!this.isAdjacent(this.currentPosition, coords)) {
-                    return;
-                }
-                
-                if (this.isBlocked(coords)) {
-                    return;
-                }
-                
-                this.currentPosition = coords.slice();
-                this.path.push(coords.slice());
-                
-                this.updateUI();
-                this.drawPath();
-                this.highlightValidMoves();
-                
-                document.getElementById('undo').disabled = this.path.length <= 1;
-            }
-            
-            undo() {
-                if (this.path.length <= 1) return;
-                
-                this.path.pop();
-                this.currentPosition = this.path[this.path.length - 1].slice();
-                
-                this.updateUI();
-                this.drawPath();
-                this.highlightValidMoves();
-                
-                document.getElementById('undo').disabled = this.path.length <= 1;
-            }
-            
-            updateUI() {
-                this.dots.forEach((dot, coordsStr) => {
-                    dot.className = 'dot';
-                    const coords = coordsStr.split(',').map(Number);
-                    
-                    if (this.arraysEqual(coords, new Array(this.dimension).fill(0))) {
-                        dot.classList.add('origin');
-                    }
-                    
-                    if (this.arraysEqual(coords, this.currentPosition)) {
-                        dot.classList.add('current');
-                    } else if (this.isVisited(coords)) {
-                        dot.classList.add('visited');
-                    }
-                });
-                
-                document.getElementById('currentPos').textContent = `(${this.currentPosition.join(',')})`;
-                document.getElementById('pathLength').textContent = this.path.length - 1;
-                document.getElementById('totalVertices').textContent = Math.pow(2, this.dimension);
-            }
-            
-            highlightValidMoves() {
-                const totalVertices = Math.pow(2, this.dimension);
-                
-                for (let i = 0; i < totalVertices; i++) {
-                    const coords = this.numberToBinaryCoords(i, this.dimension);
-                    const dot = this.dots.get(this.coordsToString(coords));
-                    
-                    if (this.isAdjacent(this.currentPosition, coords)) {
-                        if (this.isBlocked(coords)) {
-                            dot.classList.add('blocked');
-                        } else if (!this.arraysEqual(coords, this.currentPosition)) {
-                            dot.classList.add('valid-move');
-                        }
-                    }
-                }
-            }
-            
-            drawPath() {
-                this.pathLines.forEach(line => line.remove());
-                this.pathLines = [];
-                
-                const areaWidth = this.gameArea.clientWidth || 1000;
-                const areaHeight = this.gameArea.clientHeight || 600;
-                
-                // Get square size for jitter calculation
-                const W = Math.min(areaWidth, areaHeight) * 0.85;
-                const ceilHalfD = Math.ceil(this.dimension / 2);
-                const spacing = W / Math.pow(2, ceilHalfD);
-                const halfSquare = (spacing * 0.9) / 2; // Half the square size
-                
-                for (let i = 1; i < this.path.length; i++) {
-                    const from = this.coordsToPosition(this.path[i-1], areaWidth, areaHeight);
-                    const to = this.coordsToPosition(this.path[i], areaWidth, areaHeight);
-                    
-                    const line = document.createElement('div');
-                    line.className = 'path-line';
-                    
-                    const dx = to.x - from.x;
-                    const dy = to.y - from.y;
-                    const length = Math.sqrt(dx * dx + dy * dy);
-                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-                    
-                    // Calculate systematic jitter based on path position
-                    const pathIndex = i - 1; // 0-based index for this line
-                    let jitterValue = 0;
-                    
-                    if (pathIndex > 0) {
-                        const step = Math.floor((pathIndex + 1) / 2); // 1, 1, 2, 2, 3, 3, ...
-                        const sign = (pathIndex % 2 === 1) ? 1 : -1; // +, -, +, -, ...
-                        jitterValue = sign * step * 0.2; // 0.2, -0.2, 0.4, -0.4, 0.6, -0.6, ...
-                    }
-                    
-                    // Scale delta by path length: spacing/path_length
-                    const pathLength = this.path.length - 1; // number of edges
-                    const deltaScale = spacing / Math.max(pathLength, 1); // avoid division by zero
-                    const jitterOffset = jitterValue * deltaScale;
-                    
-                    let fromX = from.x;
-                    let fromY = from.y;
-                    
-                    // Apply jitter perpendicular to line direction
-                    const isHorizontal = Math.abs(dx) > Math.abs(dy);
-                    
-                    if (isHorizontal) {
-                        // Horizontal line - jitter vertically
-                        fromY += jitterOffset;
-                    } else {
-                        // Vertical line - jitter horizontally
-                        fromX += jitterOffset;
-                    }
-                    
-                    line.style.left = fromX + 'px';
-                    line.style.top = fromY + 'px';
-                    line.style.width = length + 'px';
-                    line.style.transform = `rotate(${angle}deg)`;
-                    
-                    this.gameArea.appendChild(line);
-                    this.pathLines.push(line);
-                }
-            }
+      class SnakeInBox {
+        constructor() {
+          this.dimension = 3;
+          this.currentPosition = new Array(this.dimension).fill(0);
+          this.path = [this.currentPosition.slice()];
+          this.gameArea = document.getElementById("gameArea");
+          this.canvas = document.getElementById("gameCanvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.vertices = new Map();
+          this.animationId = null;
+
+          this.init();
         }
-        
-        window.addEventListener('load', () => {
-            new SnakeInBox();
-        });
-        
-        window.addEventListener('resize', () => {
-            setTimeout(() => {
-                const game = window.snakeGame;
-                if (game) {
-                    game.generateVertices();
-                    game.drawPath();
-                }
-            }, 100);
-        });
+
+        init() {
+          document
+            .getElementById("dimension")
+            .addEventListener("change", (e) => {
+              this.dimension = parseInt(e.target.value);
+              this.restart();
+            });
+
+          document.getElementById("restart").addEventListener("click", () => {
+            this.restart();
+          });
+
+          document.getElementById("undo").addEventListener("click", () => {
+            this.undo();
+          });
+
+          this.canvas.addEventListener("click", (e) => {
+            this.handleCanvasClick(e);
+          });
+
+          window.addEventListener("resize", () => {
+            this.resizeCanvas();
+            this.generateVertices();
+            this.render();
+          });
+
+          this.resizeCanvas();
+          this.restart();
+          this.startAnimationLoop();
+        }
+
+        resizeCanvas() {
+          const rect = this.gameArea.getBoundingClientRect();
+          this.canvas.width = rect.width;
+          this.canvas.height = rect.height;
+        }
+
+        restart() {
+          this.currentPosition = new Array(this.dimension).fill(0);
+          this.path = [this.currentPosition.slice()];
+          this.generateVertices();
+          this.updateUI();
+          this.render();
+        }
+
+        generateVertices() {
+          this.vertices.clear();
+          const totalVertices = Math.pow(2, this.dimension);
+          const areaWidth = this.canvas.width;
+          const areaHeight = this.canvas.height;
+
+          for (let i = 0; i < totalVertices; i++) {
+            const coords = this.numberToBinaryCoords(i, this.dimension);
+            const position = this.coordsToPosition(
+              coords,
+              areaWidth,
+              areaHeight,
+            );
+
+            this.vertices.set(this.coordsToString(coords), {
+              coords: coords,
+              position: position,
+              size: this.getVertexSize(),
+            });
+          }
+        }
+
+        getVertexSize() {
+          const W = Math.min(this.canvas.width, this.canvas.height) * 0.85;
+          const ceilHalfD = Math.ceil(this.dimension / 2);
+          const spacing = W / Math.pow(2, ceilHalfD);
+          return spacing * 0.9;
+        }
+
+        coordsToPosition(coords, areaWidth, areaHeight) {
+          const W = Math.min(areaWidth, areaHeight) * 0.85;
+          const D = this.dimension;
+          const ceilHalfD = Math.ceil(D / 2);
+          const spacing = W / Math.pow(2, ceilHalfD);
+
+          const centerX = areaWidth / 2;
+          const centerY = areaHeight / 2;
+
+          const maxCoordX = Math.ceil(D / 2) - 1;
+          const maxCoordY = Math.floor(D / 2) - 1;
+
+          let gridX = 0;
+          let gridY = 0;
+
+          for (let i = 0; i < coords.length; i++) {
+            const power = Math.pow(2, Math.floor(i / 2));
+
+            if (i % 2 === 0) {
+              gridX += coords[i] * power;
+            } else {
+              gridY += coords[i] * power;
+            }
+          }
+
+          const x = centerX + (gridX - Math.pow(2, maxCoordX)) * spacing;
+          const y = centerY + (gridY - Math.pow(2, maxCoordY)) * spacing;
+
+          return { x, y };
+        }
+
+        handleCanvasClick(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+
+          for (const [coordsStr, vertex] of this.vertices) {
+            const dx = clickX - vertex.position.x;
+            const dy = clickY - vertex.position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= vertex.size / 2) {
+              this.handleDotClick(vertex.coords);
+              break;
+            }
+          }
+        }
+
+        startAnimationLoop() {
+          const animate = () => {
+            this.render();
+            this.animationId = requestAnimationFrame(animate);
+          };
+          animate();
+        }
+
+        render() {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.drawPath();
+
+          for (const [coordsStr, vertex] of this.vertices) {
+            this.drawVertex(vertex);
+          }
+        }
+
+        drawVertex(vertex) {
+          const { coords, position, size } = vertex;
+          const { x, y } = position;
+          const halfSize = size / 2;
+
+          let fillColor, strokeColor;
+
+          if (this.arraysEqual(coords, new Array(this.dimension).fill(0))) {
+            fillColor = "#28a745";
+            strokeColor = "#1e7e34";
+          } else if (this.arraysEqual(coords, this.currentPosition)) {
+            const pulseIntensity = (Math.sin(Date.now() / 200) + 1) / 2;
+            const r = Math.floor(220 + (255 - 220) * pulseIntensity);
+            fillColor = `rgb(${r}, 53, 69)`;
+            strokeColor = "#c82333";
+          } else if (this.isVisited(coords)) {
+            fillColor = "#ffc107";
+            strokeColor = "#e0a800";
+          } else if (this.isAdjacent(this.currentPosition, coords)) {
+            if (this.isBlocked(coords)) {
+              fillColor = "#6c757d";
+              strokeColor = "#545b62";
+            } else {
+              fillColor = "#17a2b8";
+              strokeColor = "#138496";
+            }
+          } else {
+            fillColor = "#333";
+            strokeColor = "#666";
+          }
+
+          this.ctx.fillStyle = fillColor;
+          this.ctx.strokeStyle = strokeColor;
+          this.ctx.lineWidth = 2;
+
+          this.ctx.fillRect(x - halfSize, y - halfSize, size, size);
+          this.ctx.strokeRect(x - halfSize, y - halfSize, size, size);
+        }
+
+        drawPath() {
+          if (this.path.length < 2) return;
+
+          this.ctx.strokeStyle = "#dc3545";
+          this.ctx.lineWidth = 3;
+
+          const W = Math.min(this.canvas.width, this.canvas.height) * 0.85;
+          const ceilHalfD = Math.ceil(this.dimension / 2);
+          const spacing = W / Math.pow(2, ceilHalfD);
+
+          for (let i = 1; i < this.path.length; i++) {
+            const from = this.coordsToPosition(
+              this.path[i - 1],
+              this.canvas.width,
+              this.canvas.height,
+            );
+            const to = this.coordsToPosition(
+              this.path[i],
+              this.canvas.width,
+              this.canvas.height,
+            );
+
+            const pathIndex = i - 1;
+            let jitterValue = 0;
+
+            if (pathIndex > 0) {
+              const step = Math.floor((pathIndex + 1) / 2);
+              const sign = pathIndex % 2 === 1 ? 1 : -1;
+              jitterValue = sign * step * 0.2;
+            }
+
+            const pathLength = this.path.length - 1;
+            const deltaScale = spacing / Math.max(pathLength, 1);
+            const jitterOffset = jitterValue * deltaScale;
+
+            let fromX = from.x;
+            let fromY = from.y;
+            let toX = to.x;
+            let toY = to.y;
+
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const isHorizontal = Math.abs(dx) > Math.abs(dy);
+
+            if (isHorizontal) {
+              fromY += jitterOffset;
+              toY += jitterOffset;
+            } else {
+              fromX += jitterOffset;
+              toX += jitterOffset;
+            }
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(fromX, fromY);
+            this.ctx.lineTo(toX, toY);
+            this.ctx.stroke();
+          }
+        }
+
+        numberToBinaryCoords(num, dimension) {
+          const coords = [];
+          for (let i = 0; i < dimension; i++) {
+            coords.push((num >> i) & 1);
+          }
+          return coords;
+        }
+
+        coordsToString(coords) {
+          return coords.join(",");
+        }
+
+        arraysEqual(a, b) {
+          return a.length === b.length && a.every((val, i) => val === b[i]);
+        }
+
+        isAdjacent(coords1, coords2) {
+          let differences = 0;
+          for (let i = 0; i < coords1.length; i++) {
+            if (coords1[i] !== coords2[i]) {
+              differences++;
+              if (differences > 1) return false;
+            }
+          }
+          return differences === 1;
+        }
+
+        isVisited(coords) {
+          return this.path.some((pathCoords) =>
+            this.arraysEqual(pathCoords, coords),
+          );
+        }
+
+        isBlocked(coords) {
+          if (this.isVisited(coords)) return true;
+
+          for (let i = 0; i < this.path.length - 1; i++) {
+            if (this.isAdjacent(coords, this.path[i])) {
+              return true;
+            }
+          }
+
+          return false;
+        }
+
+        handleDotClick(coords) {
+          if (!this.isAdjacent(this.currentPosition, coords)) {
+            return;
+          }
+
+          if (this.isBlocked(coords)) {
+            return;
+          }
+
+          this.currentPosition = coords.slice();
+          this.path.push(coords.slice());
+
+          this.updateUI();
+          document.getElementById("undo").disabled = this.path.length <= 1;
+        }
+
+        undo() {
+          if (this.path.length <= 1) return;
+
+          this.path.pop();
+          this.currentPosition = this.path[this.path.length - 1].slice();
+
+          this.updateUI();
+          document.getElementById("undo").disabled = this.path.length <= 1;
+        }
+
+        updateUI() {
+          document.getElementById("currentPos").textContent =
+            `(${this.currentPosition.join(",")})`;
+          document.getElementById("pathLength").textContent =
+            this.path.length - 1;
+          document.getElementById("totalVertices").textContent = Math.pow(
+            2,
+            this.dimension,
+          );
+        }
+      }
+
+      window.addEventListener("load", () => {
+        window.snakeGame = new SnakeInBox();
+      });
     </script>
-</body>
+  </body>
 </html>

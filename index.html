@@ -22,31 +22,64 @@
         flex-direction: column;
       }
 
-      .controls {
-        padding: 15px;
+      .header {
+        height: 64px;
+        padding: 8px 12px;
         background: #f8f9fa;
         border-bottom: 1px solid #ddd;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .header-title {
+        font-weight: bold;
+        margin-right: 8px;
       }
 
       .control-group {
-        display: inline-block;
-        margin-right: 20px;
-        vertical-align: top;
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
 
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
+      .control-group label {
+        font-size: 12px;
+        margin: 0;
+      }
+
+      select,
+      button,
+      textarea {
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 12px;
       }
 
       select,
       button {
-        padding: 8px 12px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
+        height: 28px;
+      }
+
+      textarea {
+        resize: none;
+        font-family: monospace;
+        min-height: 28px;
+        width: 200px;
+      }
+
+      textarea.error {
+        border-color: #dc3545;
+        background-color: #f8d7da;
       }
 
       button {
@@ -54,7 +87,6 @@
         color: white;
         border: none;
         cursor: pointer;
-        margin-right: 5px;
       }
 
       button:hover {
@@ -64,6 +96,13 @@
       button:disabled {
         background: #6c757d;
         cursor: not-allowed;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 11px;
       }
 
       .game-area {
@@ -82,13 +121,6 @@
         cursor: pointer;
       }
 
-      .info {
-        padding: 15px;
-        background: #e9ecef;
-        border-top: 1px solid #ddd;
-        flex-shrink: 0;
-      }
-
       .coordinate {
         font-family: monospace;
         background: #fff;
@@ -100,52 +132,52 @@
   </head>
   <body>
     <div class="container">
-      <h1>Snake in a Box - Hypercube Game</h1>
-      <p>
-        Navigate through a hypercube by connecting adjacent vertices. Create the
-        longest possible path!
-      </p>
-
-      <div class="controls">
-        <div class="control-group">
-          <label for="dimension">Dimension (1-10):</label>
-          <select id="dimension">
-            <option value="1">1D</option>
-            <option value="2">2D</option>
-            <option value="3" selected>3D</option>
-            <option value="4">4D</option>
-            <option value="5">5D</option>
-            <option value="6">6D</option>
-            <option value="7">7D</option>
-            <option value="8">8D</option>
-            <option value="9">9D</option>
-            <option value="10">10D</option>
-          </select>
+      <div class="header">
+        <div class="header-left">
+          <div class="header-title">Snake in a Box</div>
+          <div class="control-group">
+            <label for="dimension">Dim:</label>
+            <select id="dimension">
+              <option value="1">1D</option>
+              <option value="2">2D</option>
+              <option value="3" selected>3D</option>
+              <option value="4">4D</option>
+              <option value="5">5D</option>
+              <option value="6">6D</option>
+              <option value="7">7D</option>
+              <option value="8">8D</option>
+              <option value="9">9D</option>
+              <option value="10">10D</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <button id="restart">Restart</button>
+            <button id="undo" disabled>Undo</button>
+          </div>
         </div>
-
-        <div class="control-group">
-          <button id="restart">Restart</button>
-          <button id="undo" disabled>Undo Last Move</button>
+        <div class="header-right">
+          <div class="control-group">
+            <label for="sequence">Sequence:</label>
+            <textarea
+              id="sequence"
+              placeholder="Dimension switches..."
+            ></textarea>
+          </div>
+          <div>
+            <span class="coordinate" id="currentPos">(0,0,0)</span>
+          </div>
+          <div>Length: <span id="pathLength">0</span></div>
+          <div>
+            <a
+              href="?d=8&p=61301621520127026102742016234261245126170162152012302610234201627426124571026123421620172162472610"
+              >8D Record</a
+            >
+          </div>
         </div>
       </div>
 
       <div class="game-area" id="gameArea">
         <canvas id="gameCanvas"></canvas>
-      </div>
-
-      <div class="info">
-        <div>
-          <strong>Current Position:</strong>
-          <span class="coordinate" id="currentPos">(0,0,0)</span>
-        </div>
-        <div><strong>Path Length:</strong> <span id="pathLength">0</span></div>
-        <div>
-          <strong>Total Vertices:</strong> <span id="totalVertices">8</span>
-        </div>
-        <div>
-          <strong>Instructions:</strong> Click on boxes to move. Green=origin,
-          Red=current position, Blue=valid moves, Gray=blocked moves
-        </div>
       </div>
     </div>
 
@@ -165,11 +197,15 @@
         }
 
         init() {
+          // Initialize from URL parameters
+          this.initFromURL();
+
           document
             .getElementById("dimension")
             .addEventListener("change", (e) => {
               this.dimension = parseInt(e.target.value);
               this.restart();
+              this.updateURL();
             });
 
           document.getElementById("restart").addEventListener("click", () => {
@@ -184,6 +220,14 @@
             this.handleCanvasClick(e);
           });
 
+          document.getElementById("sequence").addEventListener("input", (e) => {
+            this.handleSequenceInput(e.target.value);
+          });
+
+          document.addEventListener("keydown", (e) => {
+            this.handleKeyDown(e);
+          });
+
           window.addEventListener("resize", () => {
             this.resizeCanvas();
             this.generateVertices();
@@ -191,8 +235,60 @@
           });
 
           this.resizeCanvas();
-          this.restart();
+          this.generateVertices();
+          this.updateUI();
+          this.render();
           this.startAnimationLoop();
+        }
+
+        initFromURL() {
+          const urlParams = new URLSearchParams(window.location.search);
+
+          // Set dimension from URL parameter 'd'
+          const dimension = urlParams.get("d");
+          if (dimension && !isNaN(dimension)) {
+            const dimValue = parseInt(dimension);
+            if (dimValue >= 1 && dimValue <= 10) {
+              this.dimension = dimValue;
+              document.getElementById("dimension").value = dimValue;
+            }
+          }
+
+          // Set path from URL parameter 'p'
+          const pathParam = urlParams.get("p");
+          if (pathParam) {
+            const textarea = document.getElementById("sequence");
+            textarea.value = pathParam;
+            try {
+              const path = this.parseSequence(pathParam);
+              if (path) {
+                this.path = path;
+                this.currentPosition = path[path.length - 1].slice();
+                textarea.classList.remove("error");
+                return; // Don't reset to default path
+              }
+            } catch (error) {
+              // If path is invalid, show it in red but use default path
+              textarea.classList.add("error");
+            }
+          }
+
+          // If no valid path from URL, use default starting position
+          this.currentPosition = new Array(this.dimension).fill(0);
+          this.path = [this.currentPosition.slice()];
+        }
+
+        updateURL() {
+          const urlParams = new URLSearchParams();
+          urlParams.set("d", this.dimension);
+
+          const sequence = this.generateSequence();
+          if (sequence) {
+            urlParams.set("p", sequence);
+          }
+
+          const newURL = window.location.pathname + "?" + urlParams.toString();
+          window.history.replaceState({}, "", newURL);
         }
 
         resizeCanvas() {
@@ -206,6 +302,7 @@
           this.path = [this.currentPosition.slice()];
           this.generateVertices();
           this.updateUI();
+          this.updateURL();
           this.render();
         }
 
@@ -286,6 +383,32 @@
           }
         }
 
+        handleKeyDown(e) {
+          const textarea = document.getElementById("sequence");
+
+          // If textarea is already focused, let default behavior handle it
+          if (document.activeElement === textarea) {
+            return;
+          }
+
+          // Handle digit keys (0-9)
+          if (e.key >= "0" && e.key <= "9") {
+            e.preventDefault();
+            textarea.focus();
+            textarea.value += e.key;
+            this.handleSequenceInput(textarea.value);
+          }
+          // Handle backspace
+          else if (e.key === "Backspace") {
+            e.preventDefault();
+            textarea.focus();
+            if (textarea.value.length > 0) {
+              textarea.value = textarea.value.slice(0, -1);
+              this.handleSequenceInput(textarea.value);
+            }
+          }
+        }
+
         startAnimationLoop() {
           const animate = () => {
             this.render();
@@ -297,11 +420,11 @@
         render() {
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-          this.drawPath();
-
           for (const [coordsStr, vertex] of this.vertices) {
             this.drawVertex(vertex);
           }
+
+          this.drawPath();
         }
 
         drawVertex(vertex) {
@@ -311,14 +434,11 @@
 
           let fillColor, strokeColor;
 
-          if (this.arraysEqual(coords, new Array(this.dimension).fill(0))) {
-            fillColor = "#28a745";
-            strokeColor = "#1e7e34";
-          } else if (this.arraysEqual(coords, this.currentPosition)) {
+          if (this.arraysEqual(coords, this.currentPosition)) {
             const pulseIntensity = (Math.sin(Date.now() / 200) + 1) / 2;
-            const r = Math.floor(220 + (255 - 220) * pulseIntensity);
-            fillColor = `rgb(${r}, 53, 69)`;
-            strokeColor = "#c82333";
+            const r = Math.floor(120 + (160 - 120) * pulseIntensity);
+            fillColor = `rgb(${r}, 20, 30)`;
+            strokeColor = "#8b0000";
           } else if (this.isVisited(coords)) {
             fillColor = "#ffc107";
             strokeColor = "#e0a800";
@@ -341,6 +461,22 @@
 
           this.ctx.fillRect(x - halfSize, y - halfSize, size, size);
           this.ctx.strokeRect(x - halfSize, y - halfSize, size, size);
+
+          // Draw dimension number for valid moves
+          if (
+            this.isAdjacent(this.currentPosition, coords) &&
+            !this.isBlocked(coords)
+          ) {
+            const dimension = this.getDimensionDifference(
+              this.currentPosition,
+              coords,
+            );
+            this.ctx.fillStyle = "#ffffff";
+            this.ctx.font = `${Math.floor(size * 0.8)}px Arial`;
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText(dimension.toString(), x, y);
+          }
         }
 
         drawPath() {
@@ -367,16 +503,16 @@
 
             const pathIndex = i - 1;
             let jitterValue = 0;
+            let jump = pathIndex % 2 === 1 ? 0.1 : 0;
 
             if (pathIndex > 0) {
               const step = Math.floor((pathIndex + 1) / 2);
-              const sign = pathIndex % 2 === 1 ? 1 : -1;
-              jitterValue = sign * step * 0.2;
+              jitterValue = step * 0.2;
             }
 
             const pathLength = this.path.length - 1;
             const deltaScale = spacing / Math.max(pathLength, 1);
-            const jitterOffset = jitterValue * deltaScale;
+            const jitterOffset = jitterValue * deltaScale + spacing * jump;
 
             let fromX = from.x;
             let fromY = from.y;
@@ -429,6 +565,15 @@
           return differences === 1;
         }
 
+        getDimensionDifference(coords1, coords2) {
+          for (let i = 0; i < coords1.length; i++) {
+            if (coords1[i] !== coords2[i]) {
+              return i;
+            }
+          }
+          return -1; // Should not happen for adjacent coordinates
+        }
+
         isVisited(coords) {
           return this.path.some((pathCoords) =>
             this.arraysEqual(pathCoords, coords),
@@ -438,6 +583,8 @@
         isBlocked(coords) {
           if (this.isVisited(coords)) return true;
 
+          // For snake in a box, no part of the path can be adjacent to any other
+          // path points except the points immediately before or after
           for (let i = 0; i < this.path.length - 1; i++) {
             if (this.isAdjacent(coords, this.path[i])) {
               return true;
@@ -460,6 +607,7 @@
           this.path.push(coords.slice());
 
           this.updateUI();
+          this.updateURL();
           document.getElementById("undo").disabled = this.path.length <= 1;
         }
 
@@ -470,6 +618,7 @@
           this.currentPosition = this.path[this.path.length - 1].slice();
 
           this.updateUI();
+          this.updateURL();
           document.getElementById("undo").disabled = this.path.length <= 1;
         }
 
@@ -478,10 +627,102 @@
             `(${this.currentPosition.join(",")})`;
           document.getElementById("pathLength").textContent =
             this.path.length - 1;
-          document.getElementById("totalVertices").textContent = Math.pow(
-            2,
-            this.dimension,
-          );
+          this.updateSequenceDisplay();
+        }
+
+        generateSequence() {
+          const sequence = [];
+          for (let i = 1; i < this.path.length; i++) {
+            const prev = this.path[i - 1];
+            const curr = this.path[i];
+            for (let dim = 0; dim < this.dimension; dim++) {
+              if (prev[dim] !== curr[dim]) {
+                sequence.push(dim);
+                break;
+              }
+            }
+          }
+          return sequence.join("");
+        }
+
+        updateSequenceDisplay() {
+          const textarea = document.getElementById("sequence");
+          if (document.activeElement !== textarea) {
+            textarea.value = this.generateSequence();
+            textarea.classList.remove("error");
+          }
+        }
+
+        handleSequenceInput(sequenceStr) {
+          const textarea = document.getElementById("sequence");
+          try {
+            const path = this.parseSequence(sequenceStr);
+            if (path) {
+              this.path = path;
+              this.currentPosition = path[path.length - 1].slice();
+              this.updateUI();
+              this.updateURL();
+              this.render();
+              textarea.classList.remove("error");
+              document.getElementById("undo").disabled = this.path.length <= 1;
+            }
+          } catch (error) {
+            textarea.classList.add("error");
+          }
+        }
+
+        parseSequence(sequenceStr) {
+          if (!sequenceStr.trim()) {
+            return [new Array(this.dimension).fill(0)];
+          }
+
+          const moves = sequenceStr
+            .split("")
+            .filter((c) => {
+              return (
+                c !== " " && c !== "\t" && c !== "\n" && c !== "," && c !== "\r"
+              );
+            })
+            .map((c) => {
+              const dim = parseInt(c);
+              if (isNaN(dim) || dim < 0 || dim >= this.dimension) {
+                throw new Error(`Invalid dimension: ${c}`);
+              }
+              return dim;
+            });
+
+          const path = [new Array(this.dimension).fill(0)];
+          let current = new Array(this.dimension).fill(0);
+
+          for (const dim of moves) {
+            const next = current.slice();
+            next[dim] = 1 - next[dim]; // flip the bit
+
+            // Validate the move
+            if (!this.isAdjacent(current, next)) {
+              throw new Error("Invalid move: not adjacent");
+            }
+
+            // Check if we're revisiting a vertex
+            for (let i = 0; i < path.length; i++) {
+              if (this.arraysEqual(path[i], next)) {
+                throw new Error("Invalid path: revisiting vertex");
+              }
+            }
+
+            // Check adjacency constraint: no part of path can be adjacent
+            // to any other path points except immediately before/after
+            for (let i = 0; i < path.length - 1; i++) {
+              if (this.isAdjacent(next, path[i])) {
+                throw new Error("Invalid path: adjacency violation");
+              }
+            }
+
+            path.push(next.slice());
+            current = next;
+          }
+
+          return path;
         }
       }
 

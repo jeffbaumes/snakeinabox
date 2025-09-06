@@ -440,8 +440,15 @@
             fillColor = `rgb(${r}, 20, 30)`;
             strokeColor = "#8b0000";
           } else if (this.isVisited(coords)) {
-            fillColor = "#ffc107";
-            strokeColor = "#e0a800";
+            // Find the position of this vertex in the path for gradient calculation
+            const pathIndex = this.path.findIndex((pathCoords) =>
+              this.arraysEqual(pathCoords, coords),
+            );
+            const progress = pathIndex / Math.max(this.path.length - 1, 1);
+            const saturation = 30 + progress * 70; // From 30% to 100% saturation
+            const lightness = 75 - progress * 20; // From 75% to 55% lightness
+            fillColor = `hsl(25, ${saturation}%, ${lightness}%)`; // Orange gradient
+            strokeColor = `hsl(25, ${Math.min(saturation + 20, 100)}%, ${Math.max(lightness - 15, 30)}%)`;
           } else if (this.isAdjacent(this.currentPosition, coords)) {
             if (this.isBlocked(coords)) {
               fillColor = "#6c757d";
@@ -482,12 +489,12 @@
         drawPath() {
           if (this.path.length < 2) return;
 
-          this.ctx.strokeStyle = "#dc3545";
           this.ctx.lineWidth = 3;
 
           const W = Math.min(this.canvas.width, this.canvas.height) * 0.85;
           const ceilHalfD = Math.ceil(this.dimension / 2);
           const spacing = W / Math.pow(2, ceilHalfD);
+          const pathLength = this.path.length - 1;
 
           for (let i = 1; i < this.path.length; i++) {
             const from = this.coordsToPosition(
@@ -501,6 +508,12 @@
               this.canvas.height,
             );
 
+            // Calculate gradient from lighter pink to stronger red
+            const progress = (i - 1) / Math.max(pathLength - 1, 1);
+            const saturation = 40 + progress * 60; // From 40% to 100% saturation
+            const lightness = 70 - progress * 25; // From 70% to 45% lightness
+            this.ctx.strokeStyle = `hsl(350, ${saturation}%, ${lightness}%)`; // Pink to red hue
+
             const pathIndex = i - 1;
             let jitterValue = 0;
             let jump = pathIndex % 2 === 1 ? 0.1 : 0;
@@ -510,7 +523,6 @@
               jitterValue = step * 0.2;
             }
 
-            const pathLength = this.path.length - 1;
             const deltaScale = spacing / Math.max(pathLength, 1);
             const jitterOffset = jitterValue * deltaScale + spacing * jump;
 
